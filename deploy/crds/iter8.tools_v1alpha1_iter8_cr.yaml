@@ -1,0 +1,60 @@
+apiVersion: iter8.tools/v1alpha1
+kind: Iter8
+metadata:
+  name: example-iter8
+spec:
+  controller:
+    service:
+      type: clusterIP
+      port: 8443
+    deployment:
+      replicaCount: 1
+      image: iter8/iter8-controller:stable
+      imagePullPolicy: Always
+      resources:
+        limits:
+          cpu: 100m
+          memory: 30Mi
+        requests:
+          cpu: 100m
+          memory: 20Mi      
+  controller:
+    deployment:
+      image: iter8/iter8-controller:stable
+  analyticsEngine:
+    deployment:
+      image: iter8/iter8-analytics:stable
+    metricsBackends:
+      - url: http://prometheus.istio-system:9090
+        authenticationType: basic
+        username: foo
+        password: bar
+        insecureSkipVerify: true
+      - url: http://prometheus.default:9090
+  metrics:
+    counter:
+      - name: iter8_request_count
+        query_template: sum(increase(istio_requests_total{reporter='source'}[$interval])) by ($version_labels)
+      - name: iter8_total_latency
+        query_template: sum(increase(istio_request_duration_seconds_sum{reporter='source'}[$interval])) by ($version_labels)
+      - name: iter8_error_count
+        query_template: sum(increase(istio_requests_total{response_code=~'5..',reporter='source'}[$interval])) by ($version_labels)
+        preferred_direction: lower
+      - name: conversion_count
+        query_template: sum(increase(newsletter_signups[$interval])) by ($version_labels)
+    # the value of a ratio metric equals value of numerator divided by denominator 
+    ratio:
+      - name: iter8_mean_latency
+        numerator: iter8_total_latency
+        denominator: iter8_request_count
+        preferred_direction: lower
+      - name: iter8_error_rate
+        numerator: iter8_error_count
+        denominator: iter8_request_count
+        preferred_direction: lower
+        unit_range: true
+      - name: conversion_rate
+        numerator: conversion_count
+        denominator: iter8_request_count
+        preferred_direction: higher
+        unit_range: true

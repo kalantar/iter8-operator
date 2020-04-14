@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iter8-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: iter8-operator
+  template:
+    metadata:
+      labels:
+        name: iter8-operator
+    spec:
+      serviceAccountName: iter8-operator
+      containers:
+        - name: iter8-operator
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          command:
+          - iter8-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "iter8-operator"
