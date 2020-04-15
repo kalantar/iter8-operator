@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
@@ -25,9 +26,9 @@ import (
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/kubernetes/pkg/apis/rbac"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -129,7 +130,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := rbac.AddToScheme(mgr.GetScheme()); err != nil {
+	if err := rbacv1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "unable add APIs to scheme")
 		os.Exit(1)
 	}
