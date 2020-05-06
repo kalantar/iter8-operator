@@ -15,11 +15,11 @@ import (
 const (
 	analyticsDefaultConfigMapName = "iter8-analytics"
 	analyticsDefaultServiceName   = "iter8-analytics"
-	analyticsDefaultServiceType   = "ClusterIP"
 	analyticsDefaultServicePort   = int32(8080)
 
-	analyticsDefaultDeploymentName    = "iter8-analytics"
-	analyticsDefaultBackendMetricsURL = "http://prometheus.istio-system:9090"
+	analyticsDefaultDeploymentName     = "iter8-analytics"
+	analyticsDefaultBackendMetricsType = "prometheus"
+	analyticsDefaultBackendMetricsURL  = "http://prometheus.istio-system:9090"
 )
 
 func (r *ReconcileIter8) analyticsEngineForIter8(iter8 *iter8v1alpha1.Iter8) error {
@@ -61,9 +61,10 @@ func (r *ReconcileIter8) configConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8)
 	}
 
 	port := iter8v1alpha1.GetServicePort(iter8.Spec.AnalyticsEngine.Service, analyticsDefaultServicePort)
+	backendType := analyticsDefaultBackendMetricsType
 	config := `
 port: ` + strconv.FormatInt(int64(port), 10) + `
-prometheus:`
+backends:`
 
 	for i := 0; i < iter8v1alpha1.GetNumMetricsBackends(iter8.Spec.AnalyticsEngine.MetricsBackends); i++ {
 		authType := *iter8v1alpha1.GetMetricsBackendAuthenticationType(iter8.Spec.AnalyticsEngine.MetricsBackends, i)
@@ -79,14 +80,15 @@ prometheus:`
 		url := iter8v1alpha1.GetMetricsBackendURL(iter8.Spec.AnalyticsEngine.MetricsBackends, i, analyticsDefaultBackendMetricsURL)
 
 		config += `
-  - url: ` + *url + `
-	auth:
-	  insecure_skip_verify: ` + strconv.FormatBool(insecureSkipVerify) + `
-	  type: ` + authType + `
-	  ca_file: ` + caFile + `
-	  token: ` + token + `
-	  username: ` + username + `
-	  password: ` + password + `
+  - type: ` + backendType + `
+    url: ` + *url + `
+    auth:
+      insecure_skip_verify: ` + strconv.FormatBool(insecureSkipVerify) + `
+      type: ` + authType + `
+      ca_file: ` + caFile + `
+      token: ` + token + `
+      username: ` + username + `
+      password: ` + password + `
 `
 	}
 
@@ -146,11 +148,6 @@ func (r *ReconcileIter8) serviceForAnalytics(iter8 *iter8v1alpha1.Iter8) *corev1
 				Port: port,
 			}},
 		},
-	}
-
-	svcType := iter8v1alpha1.GetServiceType(iter8.Spec.AnalyticsEngine.Service)
-	if nil != svcType {
-		svc.Spec.Type = *svcType
 	}
 
 	// Set Iter8 instance as the owner and controller

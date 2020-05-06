@@ -2,6 +2,7 @@ package iter8
 
 import (
 	"context"
+	"strings"
 
 	iter8v1alpha1 "github.com/iter8-tools/iter8-operator/pkg/apis/iter8/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,8 +16,7 @@ const (
 	controllerDefaultServiceAccountName = "controller-manager"
 
 	controllerDefaultServiceName = "controller-manager-service"
-	controllerDefaultServiceType = "ClusterIP"
-	controllerDefaultServicePort = int32(8443)
+	controllerDefaultServicePort = int32(443)
 
 	controllerDefaultDeploymentName        = "controller-manager"
 	controllerDefaultDeploymentGracePeriod = int64(10)
@@ -72,9 +72,6 @@ func (r *ReconcileIter8) notifierConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *
 			Name:      notifiersDefaultConfigMapName,
 			Namespace: iter8.Namespace,
 		},
-		Data: map[string]string{
-			"data": "",
-		},
 	}
 
 	// Set Iter8 instance as the owner and controller
@@ -101,41 +98,43 @@ func (r *ReconcileIter8) createOrUpdateMetricsConfigMapForIter8(iter8 *iter8v1al
 	return nil
 }
 
+// For mapping, see:
+// https://github.com/iter8-tools/iter8-controller/issues/98#issuecomment-613084721
 func (r *ReconcileIter8) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *corev1.ConfigMap {
 	counterMetrics := iter8v1alpha1.GetCounterMetrics(iter8.Spec.Metrics)
 	ratioMetrics := iter8v1alpha1.GetRatioMetrics(iter8.Spec.Metrics)
 
-	queryTemplateCache := map[string]string{
-		"iter8_sample_size": "sum(increase(istio_requests_total{source_workload_namespace!='knative-serving',reporter='source'}[$interval]$offset_str)) by ($entity_labels)",
-	}
+	queryTemplateCache := map[string]string{}
 
-	queryTemplates := `iter8_sample_size: sum(increase(istio_requests_total{source_workload_namespace!='knative-serving',reporter='source'}[$interval]$offset_str)) by ($entity_labels)"`
+	queryTemplates := ``
 	metrics := ``
 
 	for _, metric := range *counterMetrics {
 		name := metric.Name
-		qt := metric.QueryTemplate
+		qt := strings.Replace(metric.QueryTemplate, "version_labels", "entity_labels", -1)
 		queryTemplateCache[name] = qt
 		queryTemplates += `
-` + name + `: ` + qt
+` + name + `: "` + qt + `"`
 		metrics += `
 - name: ` + name + `
   is_counter: True
-  absent_value: "None"
-  sample_size_query_template: iter8_sample_size`
+  sample_size_query_template: iter8_request_count`
 	}
 
 	for _, metric := range *ratioMetrics {
 		name := metric.Name
+		if name == "iter8_mean_latency" {
+			name = "iter8_latency"
+		}
 		numerator := metric.Numerator
 		denominator := metric.Denominator
 		queryTemplates += `
-` + name + `: (` + queryTemplateCache[numerator] + `)/(` + queryTemplateCache[denominator] + `)`
+` + name + `: "(` + queryTemplateCache[numerator] + `) / (` + queryTemplateCache[denominator] + `)"`
 		metrics += `
 - name: ` + name + `
   is_counter: False
   absent_value: "None"
-  sample_size_query_template: iter8_sample_size`
+  sample_size_query_template: iter8_request_count`
 	}
 
 	cm := &corev1.ConfigMap{
@@ -226,11 +225,6 @@ func (r *ReconcileIter8) serviceForIter8Controller(iter8 *iter8v1alpha1.Iter8) *
 		},
 	}
 
-	svcType := iter8v1alpha1.GetServiceType(iter8.Spec.Controller.Service)
-	if nil != svcType {
-		svc.Spec.Type = *svcType
-	}
-
 	// Set Iter8 instance as the owner and controller
 	controllerutil.SetControllerReference(iter8, svc, r.scheme)
 	return svc
@@ -264,7 +258,6 @@ func (r *ReconcileIter8) deploymentForIter8Controller(iter8 *iter8v1alpha1.Iter8
 	serviceAccountName := controllerDefaultServiceAccountName
 	gracePeriod := controllerDefaultDeploymentGracePeriod
 	replicaCount := iter8v1alpha1.GetReplicaCount(iter8.Spec.Controller.Deployment)
-	port := iter8v1alpha1.GetServicePort(iter8.Spec.Controller.Service, controllerDefaultServicePort)
 
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -290,11 +283,12 @@ func (r *ReconcileIter8) deploymentForIter8Controller(iter8 *iter8v1alpha1.Iter8
 						Name:            controllerDefaultDeploymentName,
 						Command:         []string{"/manager"},
 						Env: []corev1.EnvVar{{
-							Name:  "POD_NAMESPACE",
-							Value: iter8.Spec.Namespace,
-						}},
-						Ports: []corev1.ContainerPort{{
-							ContainerPort: port,
+							Name: "POD_NAMESPACE",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									FieldPath: "metadata.namespace",
+								},
+							},
 						}},
 					}},
 				},

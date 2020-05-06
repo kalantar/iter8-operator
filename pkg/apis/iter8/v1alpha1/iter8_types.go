@@ -55,8 +55,6 @@ type AnalyticsEngineSpec struct {
 
 // ServiceSpec describes the service to be deployed
 type ServiceSpec struct {
-	// Type of kubernetes service to create, default is ClusterIP
-	Type *corev1.ServiceType `json:"type,omitempty"`
 	// Port on which service will listen, default is 8080
 	Port *int32 `json:"port,omitempty"`
 }
@@ -119,10 +117,10 @@ type CounterMetricSpec struct {
 	// PreferredDirection
 	// +optional
 	//+kubebuilder:validation=Enum{lower,higher}
-	PreferredDirection *string `json:"preferred_direction,optional"`
+	PreferredDirection *string `json:"preferred_direction,omitempty"`
 	// Units
 	//+kubebuilder:validation:Enum={msec,sec}
-	Units *string `json:"units,optional"`
+	Units *string `json:"units,omitempty"`
 }
 
 // RatioMetricSpec defines a ratio type metric
@@ -136,10 +134,10 @@ type RatioMetricSpec struct {
 	// PreferredDirection
 	// +optional
 	//+kubebuilder:validation=Enum{lower,higher}
-	PreferredDirection *string `json:"preferred_direction,optional"`
+	PreferredDirection *string `json:"preferred_direction,omitempty"`
 	// UnitRange
 	// +optional
-	UnitRange *bool `json:"unit_range,optional"`
+	UnitRange *bool `json:"unit_range,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -219,14 +217,6 @@ func GetServicePort(svc *ServiceSpec, defaultPort int32) int32 {
 	}
 
 	return port
-}
-
-// GetServiceType returns type of service to create
-func GetServiceType(svc *ServiceSpec) *corev1.ServiceType {
-	if nil == svc {
-		return nil
-	}
-	return svc.Type
 }
 
 // GetMetricsBackendURL returns url of selected metrics backend

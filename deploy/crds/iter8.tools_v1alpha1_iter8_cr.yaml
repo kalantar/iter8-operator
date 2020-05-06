@@ -5,32 +5,27 @@ metadata:
 spec:
   controller:
     service:
-      type: clusterIP
       port: 8443
     deployment:
       replicaCount: 1
-      image: iter8/iter8-controller:stable
+      image: iter8/iter8-controller:latest
       imagePullPolicy: Always
       resources:
         limits:
           cpu: 100m
-          memory: 30Mi
+          memory : 75Mi
         requests:
           cpu: 100m
-          memory: 20Mi      
-  controller:
-    deployment:
-      image: iter8/iter8-controller:stable
+          memory: 50Mi      
   analyticsEngine:
     deployment:
-      image: iter8/iter8-analytics:stable
+      image: kalantar/iter8-analytics:latest
     metricsBackends:
       - url: http://prometheus.istio-system:9090
-        authenticationType: basic
-        username: foo
-        password: bar
+        authenticationType: none
+        username: 
+        password: 
         insecureSkipVerify: true
-      - url: http://prometheus.default:9090
   metrics:
     counter:
       - name: iter8_request_count
