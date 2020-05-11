@@ -50,7 +50,7 @@ type AnalyticsEngineSpec struct {
 	Deployment DeploymentSpec `json:"deployment"`
 	// MetricsBackends list of metrics backends. Default is single prometheus service with basic authentication in a default location.
 	// +optional
-	MetricsBackends *[]MetricsBackendSpec `json:"metricsBackends,omitempty"`
+	MetricsBackend *MetricsBackendSpec `json:"metricsBackend,omitempty"`
 }
 
 // ServiceSpec describes the service to be deployed
@@ -82,16 +82,21 @@ type DeploymentSpec struct {
 type MetricsBackendSpec struct {
 	// Type of metrics backend. Defaults to Prometheus.
 	// +optional
-	//+kubebuilder:validation:Enum={Prometheus}
+	//+kubebuilder:validation:Enum={prometheus}
 	Type *string `json:"type,omitempty"`
 	// URL of metrics backend. Defaults to http://prometheus.istio-system:9090
 	// +optional
-	URL                *string `json:"url,omitempty"`
-	InsecureSkipVerify *bool   `json:"insecureSkipVerify,omitempty"`
-	// AuthenticationType is type of authentication. Defaults to "none".
+	URL            *string                           `json:"url,omitempty"`
+	Authentication *MetricsBackendAuthenticationSpec `json:"authentication,omitempty"`
+}
+
+// MetricsBackendAuthenticationSpec is specification for authentication
+type MetricsBackendAuthenticationSpec struct {
+	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
+	// Type is type of authentication. Defaults to "none".
 	// +optional
 	//+kubebuilder:validation:Enum={none,basic}
-	AuthenticationType *string `json:"authenticationType,omitempty"`
+	Type *string `json:"type,omitempty"`
 	// Username is username when authenticationType is "basic"
 	// +optional
 	Username *string `json:"username,omitempty"`
@@ -219,79 +224,66 @@ func GetServicePort(svc *ServiceSpec, defaultPort int32) int32 {
 	return port
 }
 
-// GetMetricsBackendURL returns url of selected metrics backend
-func GetMetricsBackendURL(mbes *[]MetricsBackendSpec, index int, defaultURL string) *string {
+// GetMetricsBackendURL returns url of the metrics backend
+func GetMetricsBackendURL(mbes *MetricsBackendSpec, defaultURL string) *string {
 	if nil == mbes {
 		return &defaultURL
 	}
-	if 0 == len(*mbes) {
-		return &defaultURL
-	}
-	if index > len(*mbes) {
-		return &defaultURL
-	}
-	result := (*mbes)[index].URL
+	result := mbes.URL
 	if nil == result {
 		return &defaultURL
 	}
 	return result
 }
 
-// GetMetricsBackendUsername returns username of selected metrics backend
-func GetMetricsBackendUsername(mbes *[]MetricsBackendSpec, index int) *string {
+// GetMetricsBackendUsername returns username of the metrics backend
+func GetMetricsBackendUsername(mbes *MetricsBackendSpec) *string {
 	defaultValue := ""
 
 	if nil == mbes {
 		return &defaultValue
 	}
-	if 0 == len(*mbes) {
+	auth := mbes.Authentication
+	if nil == auth {
 		return &defaultValue
 	}
-	if index > len(*mbes) {
-		return &defaultValue
-	}
-	result := (*mbes)[index].Username
+	result := auth.Username
 	if nil == result {
 		return &defaultValue
 	}
 	return result
 }
 
-// GetMetricsBackendPassword returns password of selected metrics backend
-func GetMetricsBackendPassword(mbes *[]MetricsBackendSpec, index int) *string {
+// GetMetricsBackendPassword returns password of the metrics backend
+func GetMetricsBackendPassword(mbes *MetricsBackendSpec) *string {
 	defaultValue := ""
 
 	if nil == mbes {
 		return &defaultValue
 	}
-	if 0 == len(*mbes) {
+	auth := mbes.Authentication
+	if nil == auth {
 		return &defaultValue
 	}
-	if index > len(*mbes) {
-		return &defaultValue
-	}
-	result := (*mbes)[index].Password
+	result := auth.Password
 	if nil == result {
 		return &defaultValue
 	}
 	return result
 }
 
-// GetMetricsBackendAuthenticationType returns required authentication method for selected metrics backend
-func GetMetricsBackendAuthenticationType(mbes *[]MetricsBackendSpec, index int) *string {
+// GetMetricsBackendAuthenticationType returns required authentication method for the metrics backend
+func GetMetricsBackendAuthenticationType(mbes *MetricsBackendSpec) *string {
 	defaultValue := "none"
 
 	if nil == mbes {
 		return &defaultValue
 	}
-	if 0 == len(*mbes) {
+	auth := mbes.Authentication
+	if nil == auth {
 		return &defaultValue
 	}
-	if index > len(*mbes) {
-		return &defaultValue
-	}
-
-	result := (*mbes)[index].AuthenticationType
+	result := auth.Type
 	if nil == result {
 		return &defaultValue
 	}
@@ -299,32 +291,21 @@ func GetMetricsBackendAuthenticationType(mbes *[]MetricsBackendSpec, index int) 
 }
 
 // GetMetricsBackendInsecureSkipVerify returns whether or not to skip verification for selected metrics backend
-func GetMetricsBackendInsecureSkipVerify(mbes *[]MetricsBackendSpec, index int) *bool {
+func GetMetricsBackendInsecureSkipVerify(mbes *MetricsBackendSpec) *bool {
 	defaultValue := false
 
 	if nil == mbes {
 		return &defaultValue
 	}
-	if 0 == len(*mbes) {
+	auth := mbes.Authentication
+	if nil == auth {
 		return &defaultValue
 	}
-	if index > len(*mbes) {
-		return &defaultValue
-	}
-
-	result := (*mbes)[index].InsecureSkipVerify
+	result := auth.InsecureSkipVerify
 	if nil == result {
 		return &defaultValue
 	}
 	return result
-}
-
-// GetNumMetricsBackends returns number of metrics backends
-func GetNumMetricsBackends(mbe *[]MetricsBackendSpec) int {
-	if nil == mbe {
-		return 0
-	}
-	return len(*mbe)
 }
 
 // GetCounterMetrics returns counter metrics if any

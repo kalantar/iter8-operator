@@ -62,35 +62,32 @@ func (r *ReconcileIter8) configConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8)
 
 	port := iter8v1alpha1.GetServicePort(iter8.Spec.AnalyticsEngine.Service, analyticsDefaultServicePort)
 	backendType := analyticsDefaultBackendMetricsType
+
+	caFile := ""
+	token := ""
+	username := ""
+	password := ""
+	authType := *iter8v1alpha1.GetMetricsBackendAuthenticationType(iter8.Spec.AnalyticsEngine.MetricsBackend)
+	if authType == "basic" {
+		username = *iter8v1alpha1.GetMetricsBackendUsername(iter8.Spec.AnalyticsEngine.MetricsBackend)
+		password = *iter8v1alpha1.GetMetricsBackendPassword(iter8.Spec.AnalyticsEngine.MetricsBackend)
+	}
+	url := iter8v1alpha1.GetMetricsBackendURL(iter8.Spec.AnalyticsEngine.MetricsBackend, analyticsDefaultBackendMetricsURL)
+	insecureSkipVerify := *iter8v1alpha1.GetMetricsBackendInsecureSkipVerify(iter8.Spec.AnalyticsEngine.MetricsBackend)
+
 	config := `
 port: ` + strconv.FormatInt(int64(port), 10) + `
-backends:`
-
-	for i := 0; i < iter8v1alpha1.GetNumMetricsBackends(iter8.Spec.AnalyticsEngine.MetricsBackends); i++ {
-		authType := *iter8v1alpha1.GetMetricsBackendAuthenticationType(iter8.Spec.AnalyticsEngine.MetricsBackends, i)
-		insecureSkipVerify := *iter8v1alpha1.GetMetricsBackendInsecureSkipVerify(iter8.Spec.AnalyticsEngine.MetricsBackends, i)
-		caFile := ""
-		token := ""
-		username := ""
-		password := ""
-		if authType == "basic" {
-			username = *iter8v1alpha1.GetMetricsBackendUsername(iter8.Spec.AnalyticsEngine.MetricsBackends, i)
-			password = *iter8v1alpha1.GetMetricsBackendPassword(iter8.Spec.AnalyticsEngine.MetricsBackends, i)
-		}
-		url := iter8v1alpha1.GetMetricsBackendURL(iter8.Spec.AnalyticsEngine.MetricsBackends, i, analyticsDefaultBackendMetricsURL)
-
-		config += `
-  - type: ` + backendType + `
-    url: ` + *url + `
-    auth:
-      insecure_skip_verify: ` + strconv.FormatBool(insecureSkipVerify) + `
-      type: ` + authType + `
-      ca_file: ` + caFile + `
-      token: ` + token + `
-      username: ` + username + `
-      password: ` + password + `
+metricsBackend:
+  type: ` + backendType + `
+  url: ` + *url + `
+  auth:
+    insecure_skip_verify: ` + strconv.FormatBool(insecureSkipVerify) + `
+    type: ` + authType + `
+    ca_file: ` + caFile + `
+    token: ` + token + `
+    username: ` + username + `
+    password: ` + password + `
 `
-	}
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -183,7 +180,7 @@ func (r *ReconcileIter8) deploymentForIter8Analytics(iter8 *iter8v1alpha1.Iter8)
 
 	replicaCount := iter8v1alpha1.GetReplicaCount(iter8.Spec.AnalyticsEngine.Deployment)
 	port := iter8v1alpha1.GetServicePort(iter8.Spec.AnalyticsEngine.Service, analyticsDefaultServicePort)
-	backendURL := iter8v1alpha1.GetMetricsBackendURL(iter8.Spec.AnalyticsEngine.MetricsBackends, 0, analyticsDefaultBackendMetricsURL)
+	backendURL := iter8v1alpha1.GetMetricsBackendURL(iter8.Spec.AnalyticsEngine.MetricsBackend, analyticsDefaultBackendMetricsURL)
 
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

@@ -78,41 +78,42 @@ spec:
                   required:
                   - image
                   type: object
-                metricsBackends:
+                metricsBackend:
                   description: MetricsBackends list of metrics backends. Default is
                     single prometheus service with basic authentication in a default
                     location.
-                  items:
-                    description: MetricsBackendSpec describes a backend from which
-                      metrics are collected
-                    properties:
-                      authenticationType:
-                        description: AuthenticationType is type of authentication.
-                          Defaults to "none".
-                        enum:
-                        - none
-                        - basic
-                        type: string
-                      insecureSkipVerify:
-                        type: boolean
-                      password:
-                        description: Password is password when authenticationType
-                          is "basic"
-                        type: string
-                      type:
-                        description: Type of metrics backend. Defaults to Prometheus.
-                        enum:
-                        - Prometheus
-                        type: string
-                      url:
-                        description: URL of metrics backend. Defaults to http://prometheus.istio-system:9090
-                        type: string
-                      username:
-                        description: Username is username when authenticationType
-                          is "basic"
-                        type: string
-                    type: object
-                  type: array
+                  properties:
+                    authentication:
+                      description: MetricsBackendAuthenticationSpec is specification
+                        for authentication
+                      properties:
+                        insecureSkipVerify:
+                          type: boolean
+                        password:
+                          description: Password is password when authenticationType
+                            is "basic"
+                          type: string
+                        type:
+                          description: Type is type of authentication. Defaults to
+                            "none".
+                          enum:
+                          - none
+                          - basic
+                          type: string
+                        username:
+                          description: Username is username when authenticationType
+                            is "basic"
+                          type: string
+                      type: object
+                    type:
+                      description: Type of metrics backend. Defaults to Prometheus.
+                      enum:
+                      - prometheus
+                      type: string
+                    url:
+                      description: URL of metrics backend. Defaults to http://prometheus.istio-system:9090
+                      type: string
+                  type: object
                 service:
                   description: Service details of service
                   properties:

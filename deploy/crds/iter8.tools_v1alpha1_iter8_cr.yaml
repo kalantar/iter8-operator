@@ -20,12 +20,10 @@ spec:
   analyticsEngine:
     deployment:
       image: kalantar/iter8-analytics:latest
-    metricsBackends:
-      - url: http://prometheus.istio-system:9090
-        authenticationType: none
-        username: 
-        password: 
-        insecureSkipVerify: true
+    metricsBackend:
+      url: http://prometheus.istio-system:9090
+      authentication:
+        type: none
   metrics:
     counter:
       - name: iter8_request_count
