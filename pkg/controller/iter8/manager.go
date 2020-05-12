@@ -21,7 +21,10 @@ const (
 	controllerDefaultDeploymentName        = "controller-manager"
 	controllerDefaultDeploymentGracePeriod = int64(10)
 
-	metricsDefaultConfigMapName   = "iter8config-metrics"
+	metricsDefaultConfigMapName = "iter8config-metrics"
+	istioTelemetryV1            = "v1"
+	istioTelemetryV2            = "v2"
+
 	notifiersDefaultConfigMapName = "iter8config-notifiers"
 )
 
@@ -112,6 +115,9 @@ func (r *ReconcileIter8) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *c
 	for _, metric := range *counterMetrics {
 		name := metric.Name
 		qt := strings.Replace(metric.QueryTemplate, "version_labels", "entity_labels", -1)
+		if istioTelemetryV1 == iter8v1alpha1.GetIstioTelemetryVersion(iter8.Spec.Metrics) {
+			qt = strings.Replace(qt, "istio_request_duration_milliseconds_sum", "istio_request_duration_seconds_sum", -1)
+		}
 		queryTemplateCache[name] = qt
 		queryTemplates += `
 ` + name + `: "` + qt + `"`

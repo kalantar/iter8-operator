@@ -210,6 +210,13 @@ spec:
                     - query_template
                     type: object
                   type: array
+                istioTelemetry:
+                  description: Version of metrics produced by istio. In version 1.5,
+                    the metrics being pushed to prometheus changed. Defaults to v2.
+                  enum:
+                  - v1
+                  - v2
+                  type: string
                 ratio:
                   description: RatioMetrics
                   items:

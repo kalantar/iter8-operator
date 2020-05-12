@@ -107,6 +107,11 @@ type MetricsBackendAuthenticationSpec struct {
 
 // MetricsSpec list of available metrics
 type MetricsSpec struct {
+	// Version of metrics produced by istio. In version 1.5, the metrics being pushed to
+	// prometheus changed. Defaults to v2.
+	// +optional
+	//+kubebuilder:validation:Enum={v1,v2}
+	IstioTelemetry *string `json:"istioTelemetry,omitempty"`
 	// CounterMetrics
 	CounterMetrics *[]CounterMetricSpec `json:"counter,omitempty"`
 	// RatioMetrics
@@ -306,6 +311,15 @@ func GetMetricsBackendInsecureSkipVerify(mbes *MetricsBackendSpec) *bool {
 		return &defaultValue
 	}
 	return result
+}
+
+// GetIstioTelemetryVersion returns version of istio telemetry
+func GetIstioTelemetryVersion(metrics MetricsSpec) string {
+	if nil == metrics.IstioTelemetry {
+		return "v2"
+	} else {
+		return *metrics.IstioTelemetry
+	}
 }
 
 // GetCounterMetrics returns counter metrics if any
