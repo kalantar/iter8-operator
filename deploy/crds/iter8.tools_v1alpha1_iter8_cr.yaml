@@ -4,12 +4,8 @@ metadata:
   name: example-iter8
 spec:
   controller:
-    service:
-      port: 8443
     deployment:
-      replicaCount: 1
       image: iter8/iter8-controller:latest
-      imagePullPolicy: Always
       resources:
         limits:
           cpu: 100m

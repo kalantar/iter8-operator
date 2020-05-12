@@ -17,6 +17,13 @@ const (
 	analyticsDefaultServiceName   = "iter8-analytics"
 	analyticsDefaultServicePort   = int32(8080)
 
+	metricsBackendAuthType        = "authType"
+	metricsBackendAuthTypeNone    = "none"
+	metricsBackendAuthTypeBasic   = "basic"
+	prometheusSecret              = "htpasswd"
+	prometheusDefaultUsername     = "internal"
+	prometheusSecretPasswordField = "rawPassword"
+
 	analyticsDefaultDeploymentName     = "iter8-analytics"
 	analyticsDefaultBackendMetricsType = "prometheus"
 	analyticsDefaultBackendMetricsURL  = "http://prometheus.istio-system:9090"
@@ -54,6 +61,24 @@ func (r *ReconcileIter8) createOrUpdateConfigConfigMapForAnalytics(iter8 *iter8v
 	return nil
 }
 
+func (r *ReconcileIter8) getUsernamePassword(iter8 *iter8v1alpha1.Iter8) (string, string) {
+	username := ""
+	password := ""
+
+	found := &corev1.Secret{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: prometheusSecret, Namespace: iter8.Namespace}, found)
+	if err != nil {
+		log.Info("No secret found", "name", prometheusSecret)
+		return username, password
+	}
+	if enc, ok := found.Data[prometheusSecretPasswordField]; ok {
+		username = prometheusDefaultUsername
+		return username, string(enc)
+	}
+	log.Info("No such field in secret data", "name", prometheusSecretPasswordField)
+	return username, password
+}
+
 func (r *ReconcileIter8) configConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8) *corev1.ConfigMap {
 	labels := map[string]string{
 		"app.kubernetes.io/name":     "iter8-analytics",
@@ -68,12 +93,21 @@ func (r *ReconcileIter8) configConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8)
 	username := ""
 	password := ""
 	authType := *iter8v1alpha1.GetMetricsBackendAuthenticationType(iter8.Spec.AnalyticsEngine.MetricsBackend)
-	if authType == "basic" {
+	if authType == metricsBackendAuthTypeBasic {
 		username = *iter8v1alpha1.GetMetricsBackendUsername(iter8.Spec.AnalyticsEngine.MetricsBackend)
 		password = *iter8v1alpha1.GetMetricsBackendPassword(iter8.Spec.AnalyticsEngine.MetricsBackend)
 	}
 	url := iter8v1alpha1.GetMetricsBackendURL(iter8.Spec.AnalyticsEngine.MetricsBackend, analyticsDefaultBackendMetricsURL)
 	insecureSkipVerify := *iter8v1alpha1.GetMetricsBackendInsecureSkipVerify(iter8.Spec.AnalyticsEngine.MetricsBackend)
+
+	// check for username, password stored in a secret; use if present
+	// TODO?: do only if not alrady defined
+	u, p := r.getUsernamePassword(iter8)
+	if p != "" {
+		authType = metricsBackendAuthTypeBasic
+		username, password = u, p
+		insecureSkipVerify = true
+	}
 
 	config := `
 port: ` + strconv.FormatInt(int64(port), 10) + `
