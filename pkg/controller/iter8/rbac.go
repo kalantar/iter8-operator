@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	roleDefaultName = "manager-role"
+	roleDefaultName = "iter8-controller-role"
 
-	roleBindingDefaultName = "manager-rolebinding"
+	roleBindingDefaultName = "iter8-controller-rolebinding"
 )
 
 func (r *ReconcileIter8) rbacForIter8(iter8 *iter8v1alpha1.Iter8) error {
@@ -27,10 +27,10 @@ func (r *ReconcileIter8) rbacForIter8(iter8 *iter8v1alpha1.Iter8) error {
 
 func (r *ReconcileIter8) roleForIter8(iter8 *iter8v1alpha1.Iter8) error {
 	found := &rbacv1.ClusterRole{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "manager-role"}, found)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: roleDefaultName}, found)
 	if err != nil {
 		// not present
-		err = r.fromYaml("config/rbac/manager_role.yaml", iter8)
+		err = r.fromYaml("config/rbac/role.yaml", iter8)
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (r *ReconcileIter8) clusterRoleBindingForIter8(iter8 *iter8v1alpha1.Iter8) 
 		},
 		Subjects: []rbacv1.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      controllerDefaultServiceAccountName,
+			Name:      controllerDefaultName,
 			Namespace: iter8.Namespace,
 		}},
 		RoleRef: rbacv1.RoleRef{

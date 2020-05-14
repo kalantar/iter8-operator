@@ -27,7 +27,7 @@ spec:
 #        password: 
 #        insecureSkipVerify: true
   metrics:
-    istioTelemtry: v1
+    istioTelemetry: v1
     counter:
       - name: iter8_request_count
         query_template: sum(increase(istio_requests_total{reporter='source'}[$interval])) by ($version_labels)

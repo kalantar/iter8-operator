@@ -13,12 +13,10 @@ import (
 )
 
 const (
-	controllerDefaultServiceAccountName = "controller-manager"
+	controllerDefaultName = "iter8-controller"
 
-	controllerDefaultServiceName = "controller-manager-service"
 	controllerDefaultServicePort = int32(443)
 
-	controllerDefaultDeploymentName        = "controller-manager"
 	controllerDefaultDeploymentGracePeriod = int64(10)
 
 	metricsDefaultConfigMapName = "iter8config-metrics"
@@ -114,10 +112,16 @@ func (r *ReconcileIter8) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *c
 
 	for _, metric := range *counterMetrics {
 		name := metric.Name
+		log.Info("0 queryTemplate unmodified", "queryTemplated", metric.QueryTemplate)
 		qt := strings.Replace(metric.QueryTemplate, "version_labels", "entity_labels", -1)
+		log.Info("1 queryTemplate modified", "queryTemplated", qt)
+		log.Info("istioTelemetry", "metrics", iter8.Spec.Metrics)
 		if istioTelemetryV1 == iter8v1alpha1.GetIstioTelemetryVersion(iter8.Spec.Metrics) {
+			log.Info("istioTelemetry v1")
 			qt = strings.Replace(qt, "istio_request_duration_milliseconds_sum", "istio_request_duration_seconds_sum", -1)
+			log.Info("2 queryTemplate modified", "queryTemplated", qt)
 		}
+		log.Info("3 queryTemplate done", "queryTemplated", qt)
 		queryTemplateCache[name] = qt
 		queryTemplates += `
 ` + name + `: "` + qt + `"`
@@ -180,7 +184,7 @@ func (r *ReconcileIter8) createOrUpdateServiceAccount(iter8 *iter8v1alpha1.Iter8
 func (r *ReconcileIter8) serviceAccountForIter8Controller(iter8 *iter8v1alpha1.Iter8) *corev1.ServiceAccount {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "controller-manager",
+			Name:      controllerDefaultName,
 			Namespace: iter8.Namespace,
 		},
 	}
@@ -212,14 +216,14 @@ func (r *ReconcileIter8) createOrUpdateServiceForController(iter8 *iter8v1alpha1
 
 func (r *ReconcileIter8) serviceForIter8Controller(iter8 *iter8v1alpha1.Iter8) *corev1.Service {
 	labels := map[string]string{
-		"control-plane": "controller-manager",
+		"app": controllerDefaultName,
 	}
 
 	port := iter8v1alpha1.GetServicePort(iter8.Spec.Controller.Service, controllerDefaultServicePort)
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerDefaultServiceName,
+			Name:      controllerDefaultName,
 			Namespace: iter8.Namespace,
 			Labels:    labels,
 		},
@@ -258,16 +262,16 @@ func (r *ReconcileIter8) deploymentForIter8Controller(iter8 *iter8v1alpha1.Iter8
 	// reqLogger := log.WithValues("Request.Namespace", iter8.Namespace, "Request.Name", iter8.Name)
 
 	labels := map[string]string{
-		"app": "controller-manager",
+		"app": controllerDefaultName,
 	}
 
-	serviceAccountName := controllerDefaultServiceAccountName
+	serviceAccountName := controllerDefaultName
 	gracePeriod := controllerDefaultDeploymentGracePeriod
 	replicaCount := iter8v1alpha1.GetReplicaCount(iter8.Spec.Controller.Deployment)
 
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerDefaultDeploymentName,
+			Name:      controllerDefaultName,
 			Namespace: iter8.Namespace,
 			Labels:    labels,
 		},
@@ -286,7 +290,7 @@ func (r *ReconcileIter8) deploymentForIter8Controller(iter8 *iter8v1alpha1.Iter8
 					Containers: []corev1.Container{{
 						Image:           iter8.Spec.Controller.Deployment.Image,
 						ImagePullPolicy: iter8v1alpha1.GetImagePullPolicy(iter8.Spec.Controller.Deployment),
-						Name:            controllerDefaultDeploymentName,
+						Name:            controllerDefaultName,
 						Command:         []string{"/manager"},
 						Env: []corev1.EnvVar{{
 							Name: "POD_NAMESPACE",

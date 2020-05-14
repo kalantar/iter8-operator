@@ -13,9 +13,8 @@ import (
 )
 
 const (
-	analyticsDefaultConfigMapName = "iter8-analytics"
-	analyticsDefaultServiceName   = "iter8-analytics"
-	analyticsDefaultServicePort   = int32(8080)
+	analyticsDefaultName        = "iter8-analytics"
+	analyticsDefaultServicePort = int32(8080)
 
 	metricsBackendAuthType        = "authType"
 	metricsBackendAuthTypeNone    = "none"
@@ -24,7 +23,6 @@ const (
 	prometheusDefaultUsername     = "internal"
 	prometheusSecretPasswordField = "rawPassword"
 
-	analyticsDefaultDeploymentName     = "iter8-analytics"
 	analyticsDefaultBackendMetricsType = "prometheus"
 	analyticsDefaultBackendMetricsURL  = "http://prometheus.istio-system:9090"
 )
@@ -81,7 +79,7 @@ func (r *ReconcileIter8) getUsernamePassword(iter8 *iter8v1alpha1.Iter8) (string
 
 func (r *ReconcileIter8) configConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8) *corev1.ConfigMap {
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "iter8-analytics",
+		"app.kubernetes.io/name":     analyticsDefaultName,
 		"app.kubernetes.io/instance": "iter8-analytics",
 	}
 
@@ -125,7 +123,7 @@ metricsBackend:
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      analyticsDefaultConfigMapName,
+			Name:      analyticsDefaultName,
 			Namespace: iter8.Namespace,
 			Labels:    labels,
 		},
@@ -161,15 +159,14 @@ func (r *ReconcileIter8) createOrUpdateServiceForAnalytics(iter8 *iter8v1alpha1.
 
 func (r *ReconcileIter8) serviceForAnalytics(iter8 *iter8v1alpha1.Iter8) *corev1.Service {
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "iter8-analytics",
-		"app.kubernetes.io/instance": "iter8-analytics",
+		"app": analyticsDefaultName,
 	}
 
 	port := iter8v1alpha1.GetServicePort(iter8.Spec.AnalyticsEngine.Service, analyticsDefaultServicePort)
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      analyticsDefaultServiceName,
+			Name:      analyticsDefaultName,
 			Namespace: iter8.Namespace,
 			Labels:    labels,
 		},
@@ -208,8 +205,7 @@ func (r *ReconcileIter8) deploymentForIter8Analytics(iter8 *iter8v1alpha1.Iter8)
 	// reqLogger := log.WithValues("Request.Namespace", iter8.Namespace, "Request.Name", iter8.Name)
 
 	labels := map[string]string{
-		"app.kubernetes.io/name":     "iter8-analytics",
-		"app.kubernetes.io/instance": "iter8-analytics",
+		"app": analyticsDefaultName,
 	}
 
 	replicaCount := iter8v1alpha1.GetReplicaCount(iter8.Spec.AnalyticsEngine.Deployment)
@@ -218,7 +214,7 @@ func (r *ReconcileIter8) deploymentForIter8Analytics(iter8 *iter8v1alpha1.Iter8)
 
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      analyticsDefaultDeploymentName,
+			Name:      analyticsDefaultName,
 			Namespace: iter8.Namespace,
 			Labels:    labels,
 		},
@@ -235,7 +231,7 @@ func (r *ReconcileIter8) deploymentForIter8Analytics(iter8 *iter8v1alpha1.Iter8)
 					Containers: []corev1.Container{{
 						Image:           iter8.Spec.AnalyticsEngine.Deployment.Image,
 						ImagePullPolicy: iter8v1alpha1.GetImagePullPolicy(iter8.Spec.AnalyticsEngine.Deployment),
-						Name:            analyticsDefaultDeploymentName,
+						Name:            analyticsDefaultName,
 						Env: []corev1.EnvVar{{
 							Name:  "ITER8_ANALYTICS_SERVER_PORT",
 							Value: strconv.FormatInt(int64(port), 10),
@@ -257,7 +253,7 @@ func (r *ReconcileIter8) deploymentForIter8Analytics(iter8 *iter8v1alpha1.Iter8)
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: analyticsDefaultConfigMapName,
+									Name: analyticsDefaultName,
 								},
 							},
 						},

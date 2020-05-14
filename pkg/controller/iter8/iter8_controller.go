@@ -224,9 +224,9 @@ func (r *ReconcileIter8) finalize(iter8 *iter8v1alpha1.Iter8) error {
 		if contains(iter8.GetFinalizers(), finalizer) {
 
 			// Delete ClusterRoleBinding, ClusterRole, and CustomResourceDefinition
-			log.Info("finalize deleting ClusterRoleBinding", "name", "manager-rolebinding")
+			log.Info("finalize deleting ClusterRoleBinding", "name", roleBindingDefaultName)
 			rolebinding := &rbacv1.ClusterRoleBinding{}
-			err := r.client.Get(context.TODO(), types.NamespacedName{Name: "manager-rolebinding"}, rolebinding)
+			err := r.client.Get(context.TODO(), types.NamespacedName{Name: roleBindingDefaultName}, rolebinding)
 			if err == nil {
 				err = r.client.Delete(context.TODO(), rolebinding)
 				if err != nil {
@@ -234,13 +234,13 @@ func (r *ReconcileIter8) finalize(iter8 *iter8v1alpha1.Iter8) error {
 				}
 			} else {
 				if !errors.IsNotFound(err) {
-					return err
+					log.Error(err, "Unable to delete ClusterRoleBinding")
 				}
 			}
 
-			log.Info("finalize deleting ClusterRole", "name", "manager-role")
+			log.Info("finalize deleting ClusterRole", "name", roleDefaultName)
 			role := &rbacv1.ClusterRole{}
-			r.client.Get(context.TODO(), types.NamespacedName{Name: "manager-role"}, role)
+			r.client.Get(context.TODO(), types.NamespacedName{Name: roleDefaultName}, role)
 			if err == nil {
 				err = r.client.Delete(context.TODO(), role)
 				if err != nil {
@@ -248,7 +248,7 @@ func (r *ReconcileIter8) finalize(iter8 *iter8v1alpha1.Iter8) error {
 				}
 			} else {
 				if !errors.IsNotFound(err) {
-					return err
+					log.Error(err, "Unable to delete ClusterRole")
 				}
 			}
 
@@ -262,7 +262,7 @@ func (r *ReconcileIter8) finalize(iter8 *iter8v1alpha1.Iter8) error {
 				}
 			} else {
 				if !errors.IsNotFound(err) {
-					return err
+					log.Error(err, "Unable to delete CustomResourceDefintion")
 				}
 			}
 		}

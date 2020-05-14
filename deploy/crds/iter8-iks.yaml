@@ -5,7 +5,7 @@ metadata:
 spec:
   controller:
     deployment:
-      image: iter8/iter8-controller:latest
+      image: iter8/iter8-controller:v0.1.0
       imagePullPolicy: Always
       resources:
         limits:
@@ -16,14 +16,14 @@ spec:
           memory: 50Mi      
   analyticsEngine:
     deployment:
-      image: kalantar/iter8-analytics:PR80
+      image: iter8/iter8-analytics:v0.1.0
       imagePullPolicy: Always
     metricsBackend:
       url: http://prometheus.istio-system:9090
       authentication:
         type: none
   metrics:
-    istioTelemtry: v1
+    istioTelemetry: v1
     counter:
       - name: iter8_request_count
         query_template: sum(increase(istio_requests_total{reporter='source'}[$interval])) by ($version_labels)
