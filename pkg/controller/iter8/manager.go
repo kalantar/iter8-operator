@@ -112,16 +112,11 @@ func (r *ReconcileIter8) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *c
 
 	for _, metric := range *counterMetrics {
 		name := metric.Name
-		log.Info("0 queryTemplate unmodified", "queryTemplated", metric.QueryTemplate)
 		qt := strings.Replace(metric.QueryTemplate, "version_labels", "entity_labels", -1)
-		log.Info("1 queryTemplate modified", "queryTemplated", qt)
-		log.Info("istioTelemetry", "metrics", iter8.Spec.Metrics)
 		if istioTelemetryV1 == iter8v1alpha1.GetIstioTelemetryVersion(iter8.Spec.Metrics) {
-			log.Info("istioTelemetry v1")
+			log.Info("istioTelemetry v1 identified")
 			qt = strings.Replace(qt, "istio_request_duration_milliseconds_sum", "istio_request_duration_seconds_sum", -1)
-			log.Info("2 queryTemplate modified", "queryTemplated", qt)
 		}
-		log.Info("3 queryTemplate done", "queryTemplated", qt)
 		queryTemplateCache[name] = qt
 		queryTemplates += `
 ` + name + `: "` + qt + `"`
