@@ -1,4 +1,5 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- iter8_v1alpha1_iter8.yaml
+- iter8-redhat.yaml
+- iter8-iks.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

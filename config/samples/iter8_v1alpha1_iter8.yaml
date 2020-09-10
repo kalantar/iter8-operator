@@ -1,7 +1,0 @@
-apiVersion: iter8.iter8.tools/v1alpha1
-kind: Iter8
-metadata:
-  name: iter8-sample
-spec:
-  # Add fields here
-  foo: bar
