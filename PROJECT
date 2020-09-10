@@ -1,0 +1,11 @@
+domain: iter8.tools
+layout: go.kubebuilder.io/v2
+projectName: oper8or
+repo: github.com/iter8-tools/iter8-operator
+resources:
+- group: iter8
+  kind: Iter8
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
