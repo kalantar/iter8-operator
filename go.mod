@@ -1,4 +1,4 @@
-module github.com/example-inc/memcached-operator
+module github.com/iter8-tools/iter8-operator
 
 go 1.13
 

@@ -1,6 +1,6 @@
 domain: iter8.tools
 layout: go.kubebuilder.io/v2
-projectName: oper8or
+projectName: iter8-operator
 repo: github.com/iter8-tools/iter8-operator
 resources:
 - group: iter8

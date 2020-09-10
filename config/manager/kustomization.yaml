@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: kalantar/iter8-operator
-  newTag: 20200909-1930
+  newTag: 20200910-0547

@@ -29,8 +29,7 @@ import (
 // Iter8Spec defines the desired state of Iter8
 type Iter8Spec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	// Important: Run "make" to regenerate code after modifying this file
 
 	// Namespace is namespace in which should be deployed. Defaults to istio-system.
 	Namespace string `json:"namespace,omitempty"`
@@ -175,6 +174,8 @@ type RatioMetricSpec struct {
 // Iter8 is the Schema for the iter8s API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+
+// Iter8 is the Schema for the iter8s API
 type Iter8 struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
