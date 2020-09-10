@@ -5,7 +5,7 @@ metadata:
 spec:
   controller:
     deployment:
-      image: kalantar/iter8-controller:20200904-1645
+      image: iter8/iter8-controller:master
       imagePullPolicy: Always
       resources:
         limits:

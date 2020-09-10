@@ -1,11 +1,11 @@
-apiVersion: iter8.tools/v1alpha1
+apiVersion: iter8.iter8.tools/v1alpha1
 kind: Iter8
 metadata:
   name: iter8
 spec:
   controller:
     deployment:
-      image: iter8/iter8-controller:v0.1.0
+      image: iter8/iter8-controller:master
       imagePullPolicy: Always
       resources:
         limits:
@@ -16,7 +16,7 @@ spec:
           memory: 50Mi      
   analyticsEngine:
     deployment:
-      image: iter8/iter8-analytics:v0.1.0
+      image: iter8/iter8-analytics:v1.0.0-rc1
       imagePullPolicy: Always
     metricsBackend:
       type: prometheus
@@ -30,14 +30,12 @@ spec:
     istioTelemetry: v1
     counter:
       - name: iter8_request_count
-        query_template: sum(increase(istio_requests_total{reporter='source'}[$interval])) by ($version_labels)
+        query_template: sum(increase(istio_requests_total{reporter='source',job='envoy-stats'}[$interval])) by ($version_labels)
       - name: iter8_total_latency
-        query_template: sum(increase(istio_request_duration_milliseconds_sum{reporter='source'}[$interval])) by ($version_labels)
+        query_template: sum(increase(istio_request_duration_milliseconds_sum{reporter='source',job='envoy-stats'}[$interval])) by ($version_labels)
       - name: iter8_error_count
-        query_template: sum(increase(istio_requests_total{response_code=~'5..',reporter='source'}[$interval])) by ($version_labels)
+        query_template: sum(increase(istio_requests_total{response_code=~'5..',reporter='source',job='envoy-stats'}[$interval])) by ($version_labels)
         preferred_direction: lower
-      - name: conversion_count
-        query_template: sum(increase(newsletter_signups[$interval])) by ($version_labels)
     # the value of a ratio metric equals value of numerator divided by denominator 
     ratio:
       - name: iter8_mean_latency
@@ -48,9 +46,4 @@ spec:
         numerator: iter8_error_count
         denominator: iter8_request_count
         preferred_direction: lower
-        unit_range: true
-      - name: conversion_rate
-        numerator: conversion_count
-        denominator: iter8_request_count
-        preferred_direction: higher
-        unit_range: true
+        zero_to_one: true
