@@ -1,49 +1,7 @@
-apiVersion: iter8.tools/v1alpha1
+apiVersion: iter8.iter8.tools/v1alpha1
 kind: Iter8
 metadata:
-  name: example-iter8
+  name: iter8-sample
 spec:
-  controller:
-    deployment:
-      image: iter8/iter8-controller:latest
-      resources:
-        limits:
-          cpu: 100m
-          memory : 75Mi
-        requests:
-          cpu: 100m
-          memory: 50Mi      
-  analyticsEngine:
-    deployment:
-      image: kalantar/iter8-analytics:latest
-    metricsBackend:
-      url: http://prometheus.istio-system:9090
-      authentication:
-        type: none
-  metrics:
-    counter:
-      - name: iter8_request_count
-        query_template: sum(increase(istio_requests_total{reporter='source'}[$interval])) by ($version_labels)
-      - name: iter8_total_latency
-        query_template: sum(increase(istio_request_duration_seconds_sum{reporter='source'}[$interval])) by ($version_labels)
-      - name: iter8_error_count
-        query_template: sum(increase(istio_requests_total{response_code=~'5..',reporter='source'}[$interval])) by ($version_labels)
-        preferred_direction: lower
-      - name: conversion_count
-        query_template: sum(increase(newsletter_signups[$interval])) by ($version_labels)
-    # the value of a ratio metric equals value of numerator divided by denominator 
-    ratio:
-      - name: iter8_mean_latency
-        numerator: iter8_total_latency
-        denominator: iter8_request_count
-        preferred_direction: lower
-      - name: iter8_error_rate
-        numerator: iter8_error_count
-        denominator: iter8_request_count
-        preferred_direction: lower
-        unit_range: true
-      - name: conversion_rate
-        numerator: conversion_count
-        denominator: iter8_request_count
-        preferred_direction: higher
-        unit_range: true
+  # Add fields here
+  foo: bar
