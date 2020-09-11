@@ -2,13 +2,12 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	iter8v1alpha1 "github.com/iter8-tools/iter8-operator/api/v1alpha1"
-	"istio.io/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -31,56 +30,74 @@ const (
 )
 
 func (r *Iter8Reconciler) analyticsEngineForIter8(iter8 *iter8v1alpha1.Iter8) error {
+	r.Log.Info("analyticsEngineForIter8() called")
 	err := r.createOrUpdateConfigConfigMapForAnalytics(iter8)
 	if err != nil {
+		r.Log.Error(err, "Failed to create analytics ConfigMap")
 		return err
 	}
 
 	err = r.createOrUpdateServiceForAnalytics(iter8)
 	if err != nil {
+		r.Log.Error(err, "Failed to create analytics Service")
 		return err
 	}
 	err = r.createOrUpdateDeploymentForAnalytics(iter8)
+	if err != nil {
+		r.Log.Error(err, "Failed to create analytics Deployment")
+	}
 	return err
 }
 
 func (r *Iter8Reconciler) createOrUpdateConfigConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8) error {
 	// Desired state
+	r.Log.Info("createOrUpdateConfigConfigMapForAnalytics() called")
 	cm := r.configConfigMapForAnalytics(iter8)
+	r.Log.Info("createOrUpdateConfigConfigMapForAnalytics()", "cm", cm)
 
 	// Get current state
 	found := &corev1.ConfigMap{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("ConfigMap not found, creating", "name", cm.Name)
 		return r.Client.Create(context.TODO(), cm)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("ConfigMap '%s' already present", cm.Name))
+	r.Log.Info("ConfigMap already present", "name", cm.Name)
 	// cm.ResourceVersion = found.GetResourceVersion()
 	// return r.Client.Update(context.TODO(), cm)
 	return nil
 }
 
 func (r *Iter8Reconciler) getUsernamePassword(iter8 *iter8v1alpha1.Iter8) (string, string) {
+	r.Log.Info("getUsernamePassword() called")
 	username := ""
 	password := ""
 
 	found := &corev1.Secret{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: prometheusSecret, Namespace: iter8.Namespace}, found)
+	r.Log.Info("getUsernamePassword() calling r.Client.Get secret", "name", prometheusSecret, "namespace", "istio-system")
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: prometheusSecret, Namespace: "istio-system"}, found)
+	r.Log.Info("getUsernamePassword() Get returned")
 	if err != nil {
-		log.Info("No secret found", "name", prometheusSecret)
+		// could not Get
+		if errors.IsNotFound(err) {
+			r.Log.Info("No secret found", "name", prometheusSecret)
+			return username, password
+		}
+		r.Log.Error(err, "Can't read secret")
 		return username, password
 	}
 	if enc, ok := found.Data[prometheusSecretPasswordField]; ok {
 		username = prometheusDefaultUsername
 		return username, string(enc)
 	}
-	log.Info(fmt.Sprintf("No field '%s' in secret data", prometheusSecretPasswordField))
+	r.Log.Info("Expected field in secret not found", "name", prometheusSecretPasswordField)
 	return username, password
 }
 
 func (r *Iter8Reconciler) configConfigMapForAnalytics(iter8 *iter8v1alpha1.Iter8) *corev1.ConfigMap {
+	r.Log.Info("configConfigMapForAnalytics() called")
 	labels := map[string]string{
 		"app.kubernetes.io/name":     analyticsDefaultName,
 		"app.kubernetes.io/instance": "iter8-analytics",
@@ -148,11 +165,12 @@ func (r *Iter8Reconciler) createOrUpdateServiceForAnalytics(iter8 *iter8v1alpha1
 	found := &corev1.Service{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("Service not found, creating", "name", service.Name)
 		return r.Client.Create(context.TODO(), service)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("Service '%s' already present", service.Name))
+	r.Log.Info("Service already present", "name", service.Name)
 	// service.ResourceVersion = found.GetResourceVersion()
 	// service.Spec = corev1.ServiceSpec{}
 	// This causes errors; not sure why
@@ -194,11 +212,12 @@ func (r *Iter8Reconciler) createOrUpdateDeploymentForAnalytics(iter8 *iter8v1alp
 	found := &appsv1.Deployment{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("Deployment not found, creating", "name", deployment.Name)
 		return r.Client.Create(context.TODO(), deployment)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("Deployment '%s' already present", deployment.Name))
+	r.Log.Info("Deployment already present", "name", deployment.Name)
 	// deployment.ResourceVersion = found.GetResourceVersion()
 	// return r.Client.Update(context.TODO(), deployment)
 	return nil
