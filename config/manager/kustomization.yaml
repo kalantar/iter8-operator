@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: iter8/iter8-operator
-  newTag: v1.0.0-rc1
+  newTag: v0.0.1-rc2

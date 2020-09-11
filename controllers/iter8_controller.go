@@ -55,6 +55,7 @@ type Iter8Reconciler struct {
 
 // +kubebuilder:rbac:groups=iter8.iter8.tools,resources=iter8s,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=iter8.iter8.tools,resources=iter8s/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=iter8.iter8.tools,resources=iter8s/finalizers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
@@ -64,6 +65,7 @@ type Iter8Reconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create;update;patch;delete;bind
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;patch;delete
 
+// Reconcile attempts to reconcile the observed state with the desired state
 func (r *Iter8Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("iter8", req.NamespacedName)
@@ -123,6 +125,7 @@ func (r *Iter8Reconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager ...
 func (r *Iter8Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&iter8v1alpha1.Iter8{}).

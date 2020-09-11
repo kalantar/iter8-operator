@@ -2,12 +2,10 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	iter8v1alpha1 "github.com/iter8-tools/iter8-operator/api/v1alpha1"
 	"gopkg.in/yaml.v2"
-	"istio.io/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,21 +31,28 @@ func (r *Iter8Reconciler) controllerForIter8(iter8 *iter8v1alpha1.Iter8) error {
 
 	err := r.createOrUpdateServiceAccount(iter8)
 	if err != nil {
+		r.Log.Error(err, "Failed to create ServiceAccount")
 		return err
 	}
 	err = r.createOrUpdateNotifierConfigMapForIter8(iter8)
 	if err != nil {
+		r.Log.Error(err, "Failed to create nofifier ConfigMap")
 		return err
 	}
 	err = r.createOrUpdateMetricsConfigMapForIter8(iter8)
 	if err != nil {
+		r.Log.Error(err, "Failed to create metrics ConfigMap")
 		return err
 	}
 	err = r.createOrUpdateServiceForController(iter8)
 	if err != nil {
+		r.Log.Error(err, "Failed to create controller Service")
 		return err
 	}
 	err = r.createOrUpdateDeploymentForController(iter8)
+	if err != nil {
+		r.Log.Error(err, "Failed to create controller Deployment")
+	}
 	return err
 }
 
@@ -59,11 +64,12 @@ func (r *Iter8Reconciler) createOrUpdateNotifierConfigMapForIter8(iter8 *iter8v1
 	found := &corev1.ConfigMap{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("ConfigMap not found, creating", "name", cm.Name)
 		return r.Client.Create(context.TODO(), cm)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("ConfigMap '%s' already present", cm.Name))
+	r.Log.Info("ConfigMap already present", "name", cm.Name)
 	// cm.ResourceVersion = found.GetResourceVersion()
 	// return r.Client.Update(context.TODO(), cm)
 	return nil
@@ -90,11 +96,12 @@ func (r *Iter8Reconciler) createOrUpdateMetricsConfigMapForIter8(iter8 *iter8v1a
 	found := &corev1.ConfigMap{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("ConfigMap not found, creating", "name", cm.Name)
 		return r.Client.Create(context.TODO(), cm)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("ConfigMap '%s' already present", cm.Name))
+	r.Log.Info("ConfigMap already present", "name", cm.Name)
 	// cm.ResourceVersion = found.GetResourceVersion()
 	// return r.Client.Update(context.TODO(), cm)
 	return nil
@@ -106,7 +113,7 @@ func (r *Iter8Reconciler) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *
 	istioTelemetryVersion := iter8v1alpha1.GetIstioTelemetryVersion(iter8.Spec.Metrics)
 
 	if istioTelemetryV1 == istioTelemetryVersion {
-		log.Info("istioTelemetry v1 identified")
+		r.Log.Info("istioTelemetry v1 identified")
 		for _, metric := range *counterMetrics {
 			metric.QueryTemplate = strings.Replace(metric.QueryTemplate, "istio_request_duration_milliseconds_sum", "istio_request_duration_seconds_sum", -1)
 			metric.QueryTemplate = strings.Replace(metric.QueryTemplate, "envoy-stats", "istio-mesh", -1)
@@ -142,16 +149,18 @@ func (r *Iter8Reconciler) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *
 func (r *Iter8Reconciler) createOrUpdateServiceAccount(iter8 *iter8v1alpha1.Iter8) error {
 	// Desired state
 	serviceAccount := r.serviceAccountForIter8Controller(iter8)
+	r.Log.Info("desired ServiceAccount", "sa", serviceAccount)
 
 	// Get current state
 	found := &corev1.ServiceAccount{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: serviceAccount.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("ServiceAccount not found, creating", "name", serviceAccount.Name)
 		return r.Client.Create(context.TODO(), serviceAccount)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("ServiceAccount '%s' already present", serviceAccount.Name))
+	r.Log.Info("ServiceAccount already present", "name", serviceAccount.Name)
 	// serviceAccount.ResourceVersion = found.GetResourceVersion()
 	// return r.Client.Update(context.TODO(), serviceAccount)
 	return nil
@@ -178,11 +187,12 @@ func (r *Iter8Reconciler) createOrUpdateServiceForController(iter8 *iter8v1alpha
 	found := &corev1.Service{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: service.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("Service not found, creating", "name", service.Name)
 		return r.Client.Create(context.TODO(), service)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("Service '%s' already present", service.Name))
+	r.Log.Info("Service already present", "name", service.Name)
 	// service.ResourceVersion = found.GetResourceVersion()
 	// service.Spec = corev1.ServiceSpec{}
 	// This causes errors; not sure why
@@ -224,11 +234,12 @@ func (r *Iter8Reconciler) createOrUpdateDeploymentForController(iter8 *iter8v1al
 	found := &appsv1.Deployment{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: iter8.Namespace}, found)
 	if err != nil {
+		r.Log.Info("Deployment not found, creating", "name", deployment.Name)
 		return r.Client.Create(context.TODO(), deployment)
 	}
 
 	// If changed, update
-	log.Info(fmt.Sprintf("Deployment '%s' already present", deployment.Name))
+	r.Log.Info("Deployment already present", "name", deployment.Name)
 	// deployment.ResourceVersion = found.GetResourceVersion()
 	// return r.Client.Update(context.TODO(), deployment)
 	return nil

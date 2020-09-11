@@ -9,11 +9,11 @@ import (
 	"sync"
 
 	iter8v1alpha1 "github.com/iter8-tools/iter8-operator/api/v1alpha1"
-	"istio.io/pkg/log"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -22,26 +22,28 @@ func (r *Iter8Reconciler) crdsForIter8(iter8 *iter8v1alpha1.Iter8) error {
 	found := &apiextensionsv1beta1.CustomResourceDefinition{}
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: "experiments.iter8.tools"}, found)
 	if err != nil {
-		// not present
+		// could not Get
 		if errors.IsNotFound(err) {
 			err = InstallCRD(r.Client)
 			if err != nil {
+				ctrl.Log.Error(err, "Failed to create CustomResourceDefinition")
 				return err
 			}
 		} else {
+			ctrl.Log.Error(err, "Failed to create CustomResourceDefinition: search failed")
 			return err
 		}
 	} else {
 		// // make sure has owner
 		// owner := found.GetOwnerReferences()
 		// if 0 == len(owner) {
-		// 	log.Info("Updating owner on CustomResourceDefinition", "name", found.Name)
+		// 	ctrl.Log.Info("Updating owner on CustomResourceDefinition", "name", found.Name)
 		// 	// Set Iter8 instance as the owner and controller
 		// 	controllerutil.SetControllerReference(iter8, found, r.scheme)
 		// 	err = r.client.Update(context.TODO(), found)
 		// 	return err
 		// }
-		log.Info(fmt.Sprintf("CustomResourceDefinition '%s' already present", found.Name))
+		ctrl.Log.Info("CustomResourceDefinition already present", "name", found.Name)
 	}
 	return nil
 }
@@ -80,12 +82,12 @@ func InstallCRD(cl client.Client) error {
 func decodeCRD(raw string) (*apiextensionsv1beta1.CustomResourceDefinition, error) {
 	rawJSON, err := yaml.YAMLToJSON([]byte(raw))
 	if err != nil {
-		log.Error(err, "unable to convert raw data to JSON")
+		ctrl.Log.Error(err, "unable to convert raw data to JSON")
 		return nil, err
 	}
 	obj := &apiextensionsv1beta1.CustomResourceDefinition{}
 	if _, _, err = unstructured.UnstructuredJSONScheme.Decode(rawJSON, nil, obj); err != nil {
-		log.Error(err, "unable to decode object into Unstructured")
+		ctrl.Log.Error(err, "unable to decode object into Unstructured")
 		return nil, err
 	}
 	if obj.GroupVersionKind().GroupKind().String() == "CustomResourceDefinition.apiextensions.k8s.io" {
@@ -105,7 +107,7 @@ func createCRD(cl client.Client, crd *apiextensionsv1beta1.CustomResourceDefinit
 		err = cl.Create(context.TODO(), crd)
 	}
 	if err != nil {
-		log.Error(err, "error creating CRD")
+		ctrl.Log.Error(err, "error creating CRD")
 		return err
 	}
 	return nil
@@ -114,7 +116,7 @@ func createCRD(cl client.Client, crd *apiextensionsv1beta1.CustomResourceDefinit
 // RemoveTypeObjectFieldsFromCRDSchema works around the problem where OpenShift 3.11 doesn't like "type: object"
 // in CRD OpenAPI schemas. This function removes all occurrences from the schema.
 func RemoveTypeObjectFieldsFromCRDSchema(ctx context.Context, crd *apiextensionsv1beta1.CustomResourceDefinition) error {
-	log.Info("The API server rejected the CRD. Removing type:object fields from the CRD schema and trying again.")
+	ctrl.Log.Info("The API server rejected the CRD. Removing type:object fields from the CRD schema and trying again.")
 
 	if crd.Spec.Validation == nil || crd.Spec.Validation.OpenAPIV3Schema == nil {
 		return fmt.Errorf("Could not remove type:object fields from CRD schema as no spec.validation.openAPIV3Schema exists")
