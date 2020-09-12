@@ -21,8 +21,10 @@ const (
 	controllerDefaultDeploymentGracePeriod = int64(10)
 
 	metricsDefaultConfigMapName = "iter8config-metrics"
-	istioTelemetryV1            = "v1"
-	istioTelemetryV2            = "v2"
+
+	istioNamespace  = "istio-system"
+	istioConfigMap  = "istio"
+	istioConfigName = "mesh"
 
 	notifiersDefaultConfigMapName = "iter8config-notifiers"
 )
@@ -107,17 +109,42 @@ func (r *Iter8Reconciler) createOrUpdateMetricsConfigMapForIter8(iter8 *iter8v1a
 	return nil
 }
 
+func (r *Iter8Reconciler) mixerDisabled() bool {
+	istio := &corev1.ConfigMap{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: istioConfigMap, Namespace: istioNamespace}, istio)
+	if err != nil {
+		r.Log.Error(err, "Cound not read Istio configuration; assuming mixer is NOT disabled")
+		return false
+	}
+
+	mesh := struct {
+		DisableMixerHTTPReports *bool `yaml:"disableMixerHttpReports,omitempty"`
+	}{}
+	err = yaml.Unmarshal([]byte(istio.Data[istioConfigName]), &mesh)
+	if err != nil {
+		r.Log.Error(err, "Could not read Istio configuration; assuming mixer is NOT disabled")
+		return false
+	}
+
+	if nil != mesh.DisableMixerHTTPReports {
+		return *mesh.DisableMixerHTTPReports
+	}
+	r.Log.Info("Could not find field 'disableMixerHttpReports' in Istio configuration; assuming mixer is NOT disabled")
+	return false
+}
+
 func (r *Iter8Reconciler) metricsConfigMapForIter8(iter8 *iter8v1alpha1.Iter8) *corev1.ConfigMap {
 	counterMetrics := iter8v1alpha1.GetCounterMetrics(iter8.Spec.Metrics)
 	ratioMetrics := iter8v1alpha1.GetRatioMetrics(iter8.Spec.Metrics)
-	istioTelemetryVersion := iter8v1alpha1.GetIstioTelemetryVersion(iter8.Spec.Metrics)
 
-	if istioTelemetryV1 == istioTelemetryVersion {
-		r.Log.Info("istioTelemetry v1 identified")
+	if !r.mixerDisabled() {
+		r.Log.Info("Istio mixer NOT disabled; modifying metric query templates")
 		for _, metric := range *counterMetrics {
 			metric.QueryTemplate = strings.Replace(metric.QueryTemplate, "istio_request_duration_milliseconds_sum", "istio_request_duration_seconds_sum", -1)
 			metric.QueryTemplate = strings.Replace(metric.QueryTemplate, "envoy-stats", "istio-mesh", -1)
 		}
+	} else {
+		r.Log.Info("Istio mixer disabled")
 	}
 
 	counterMetricsYaml, err := yaml.Marshal(counterMetrics)

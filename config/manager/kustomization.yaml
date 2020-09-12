@@ -4,5 +4,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: iter8/iter8-operator
-  newTag: v0.0.1-rc2
+  newName: kalantar/iter8-operator
+  newTag: "202009112025"

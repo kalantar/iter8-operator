@@ -23,7 +23,6 @@ spec:
       authentication:
         type: none
   metrics:
-    istioTelemetry: v2
     counter:
       - name: iter8_request_count
         query_template: sum(increase(istio_requests_total{reporter='source',job='envoy-stats'}[$interval])) by ($version_labels)
